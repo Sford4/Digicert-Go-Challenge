@@ -20,9 +20,7 @@ func (db Database) CreateBook(book *data.Book) (newID int, err error) {
 		return -1, err
 	}
 
-	queryStatement := `
-    INSERT INTO Books(title, description, author, year ) VALUES (@Title, @Description, @Author, @Year);
-   `
+	queryStatement := fmt.Sprintf("INSERT INTO Books(title, description, author, year ) VALUES ( '%v', '%v', '%v', '%d' ); SELECT SCOPE_IDENTITY();", book.Title, book.Description, book.Author, book.Year)
 
 	query, err := db.SqlDb.Prepare(queryStatement)
 	if err != nil {
@@ -31,12 +29,7 @@ func (db Database) CreateBook(book *data.Book) (newID int, err error) {
 
 	defer query.Close()
 
-	newRecord := query.QueryRowContext(dbContext,
-		sql.Named("Title", &book.Title),
-		sql.Named("Description", &book.Description),
-		sql.Named("Author", &book.Author),
-		sql.Named("Year", &book.Year),
-	)
+	newRecord := query.QueryRowContext(dbContext)
 
 	err = newRecord.Scan(&newID)
 	if err != nil {
@@ -53,11 +46,7 @@ func (db Database) UpdateBook(book *data.Book) error {
 		return err
 	}
 
-	queryStatement := `
-    UPDATE Books 
-	SET title = @Title, description = @Description, author = @Author, year = @Year,
-	WHERE id = @ID;
-   `
+	queryStatement := fmt.Sprintf("UPDATE Books SET title='%v', description='%v', author='%v', year='%d' WHERE id='%d';", book.Title, book.Description, book.Author, book.Year, book.ID)
 
 	query, err := db.SqlDb.Prepare(queryStatement)
 	if err != nil {
@@ -66,17 +55,10 @@ func (db Database) UpdateBook(book *data.Book) error {
 
 	defer query.Close()
 
-	updatedRecord := query.QueryRowContext(dbContext,
-		sql.Named("Title", &book.Title),
-		sql.Named("Description", &book.Description),
-		sql.Named("Author", &book.Author),
-		sql.Named("Year", &book.Year),
-		sql.Named("ID", &book.ID),
-	)
+	_, queryErr := query.QueryContext(dbContext)
 
-	err = updatedRecord.Scan()
-	if err != nil {
-		return err
+	if queryErr != nil {
+		return queryErr
 	}
 
 	return nil
@@ -138,14 +120,19 @@ func (db Database) DeleteBook(id string) error {
 
 	err = db.SqlDb.PingContext(dbContext)
 	if err != nil {
-		fmt.Printf("Error checking db connection: %v", err)
+		return err
 	}
 
-	queryStatement := `DELETE FROM Books WHERE id = @ID;`
+	queryStatement := fmt.Sprintf("DELETE FROM Books WHERE id='%v';", id)
 
-	_, err = db.SqlDb.ExecContext(dbContext, queryStatement, sql.Named("ID", id))
+	stmt, err := db.SqlDb.Prepare(queryStatement)
 	if err != nil {
 		return err
+	}
+
+	_, queryErr := stmt.Query()
+	if queryErr != nil {
+		return queryErr
 	}
 
 	return nil

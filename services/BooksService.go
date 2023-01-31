@@ -10,6 +10,7 @@ import (
 	"os"
 	"strconv"
 
+	_ "github.com/denisenkom/go-mssqldb"
 	"github.com/gorilla/mux"
 	"github.com/joho/godotenv"
 )
@@ -94,7 +95,7 @@ func CreateSingleBook(w http.ResponseWriter, r *http.Request) {
 	id, err := db.CreateBook(&newBook)
 	if err != nil {
 		w.WriteHeader(http.StatusNotFound)
-		_, _ = w.Write([]byte("Failed to create book"))
+		_, _ = w.Write([]byte("Could not create book"))
 		return
 	}
 	w.WriteHeader(http.StatusOK)
@@ -111,7 +112,7 @@ func UpdateSingleBook(w http.ResponseWriter, r *http.Request) {
 	err := decoder.Decode(&newBook)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
-		_, _ = w.Write([]byte("Failed to create book"))
+		_, _ = w.Write([]byte("Failed to update book"))
 		return
 	}
 	err = db.UpdateBook(&newBook)
